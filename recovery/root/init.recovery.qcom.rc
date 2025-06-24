@@ -26,8 +26,9 @@
 #
 
 on init
-    setprop prepdecrypt.setpatch true
     start vendor.boot-qti
+    start gatekeeper-1-0
+    setprop prepdecrypt.setpatch true    
 
 on early-fs
     write /proc/sys/walt/sched_lib_name "recovery,magiskboot,Updater,updater,update_engine_sideload"
@@ -61,11 +62,15 @@ on property:twrp.modules.loaded=true
     write /sys/kernel/boot_adsp/ssr 1
     wait /sys/class/power_supply/battery
     start health-hal-2-1
+    start vendor.qti.vibrator
     umount /firmware
 
 on property:ro.crypto.state=encrypted && property:ro.boot.dynamic_partitions=true
     start prepdecrypt.vendor
 
 on property:hwservicemanager.ready=true
+    start vendor.qseecomd
     setprop sys.boot_completed 1
-    start vendor.qti.vibrator
+
+on property:vendor.sys.listeners.registered=true
+    start vendor.keymint-qti
