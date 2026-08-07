@@ -88,6 +88,29 @@ relink()
 	fi
 }
 
+wait_for_service() {
+	i=0
+	while [ "$i" -lt 30 ]; do
+		if [ "$(getprop init.svc."$1")" = "$2" ]; then
+			return 0
+		fi
+		sleep 1
+		i=$((i + 1))
+	done
+	log_print 0 "$1 did not reach state $2."
+	return 1
+}
+
+# The HAL reads the version properties in its constructor and hands them to the
+# TA, so it is left disabled until they match the installed system. Start it
+# even when they could not be read: keystore2 blocks until KeyMint registers,
+# and nothing decrypts without it.
+start_crypto_services() {
+	log_print 1 "Starting KeyMint..."
+	setprop ctl.start vendor.keymint-qti
+	wait_for_service vendor.keymint-qti running
+}
+
 finish()
 {
 	if [ "$SETPATCH" = "true" ]; then
@@ -106,6 +129,7 @@ finish()
 			fi
 		fi
 	fi
+	start_crypto_services
 	setprop crypto.ready 1
 	log_print 1 "crypto.ready=$(getprop crypto.ready)"
 	log_print 1 "Script complete. Device ready for decryption."
@@ -130,6 +154,7 @@ finish_error()
 			fi
 		fi
 	fi
+	start_crypto_services
 	setprop crypto.ready 1
 	log_print 0 "Script run incomplete. Device may not be ready for decryption."
 	exit 2
